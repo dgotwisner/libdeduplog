@@ -15,6 +15,5 @@ Makefile
 *.orig
 config.log
 config.status
-build-aux/*
 *.lo
 documentation
