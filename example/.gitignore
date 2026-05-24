@@ -1,0 +1,8 @@
+.deps
+Makefile.am
+*.o
+.libs
+ctest
+test
+Makefile
+.dirstamp

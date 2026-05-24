@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: deduplog
+Description: Deduplication logging library
+Version: @VERSION@
+Libs: -L${libdir} -ldeduplog @SYSTEMD_LIBS@
+Cflags: -I${includedir}

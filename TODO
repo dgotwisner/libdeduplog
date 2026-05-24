@@ -1,0 +1,16 @@
+Various build environments:
+    Get building for Mac / BSD
+    Get building with Visual Studio for a pure (DLL) Windows target
+
+Various language bindings:
+    Add Python bindings so code can be called from python3
+    Add Rust bindings so code can be called from rust
+    Add Go bindings so code can be called from go
+
+    Add Kotlin bindings so code can be called from rust
+    Add Java bindings so code can be called from rust
+    Add C# bindings so code can be called from rust
+
+Get Windows code to output to the event log, or whatever it's currently called
+
+Cross-platform work - might include bitbake and/or bazel
