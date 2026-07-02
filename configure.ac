@@ -45,5 +45,8 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$HAVE_DOXYGEN" = "xyes"])
 AC_CHECK_PROG([HAVE_CPPCHECK], [cppcheck], [yes], [no])
 AM_CONDITIONAL([HAVE_CPPCHECK], [test "x$HAVE_CPPCHECK" = "xyes"])
 
+AC_CHECK_PROG([HAVE_CLANGTIDY], [clang-tidy], [yes], [no])
+AM_CONDITIONAL([HAVE_CLANGTIDY], [test "x$HAVE_CLANGTIDY" = "xyes"])
+
 AC_CONFIG_FILES([Makefile example/Makefile deduplog.pc])
 AC_OUTPUT

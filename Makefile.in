@@ -319,6 +319,7 @@ FGREP = @FGREP@
 FILECMD = @FILECMD@
 GREP = @GREP@
 HAVE_ASTYLE = @HAVE_ASTYLE@
+HAVE_CLANGTIDY = @HAVE_CLANGTIDY@
 HAVE_CPPCHECK = @HAVE_CPPCHECK@
 HAVE_DOXYGEN = @HAVE_DOXYGEN@
 INSTALL = @INSTALL@
@@ -1122,6 +1123,7 @@ doxygen:
 # violations on the std::unordered_map lookup tables.
 #    --addon=misra
 cppcheck:
+@HAVE_CPPCHECK_TRUE@	-rm -f cppcheck.checkers cppcheck.out
 @HAVE_CPPCHECK_TRUE@	cppcheck --enable=all --inconclusive --force --std=c++11 \
 @HAVE_CPPCHECK_TRUE@	    --language=c++ -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 \
 @HAVE_CPPCHECK_TRUE@	    --output-file=cppcheck.out --check-level=exhaustive -v \
@@ -1133,7 +1135,33 @@ cppcheck:
 @HAVE_CPPCHECK_TRUE@	    -D__has_cpp_attribute\(x\)=0 -D__has_feature\(x\)=0 \
 @HAVE_CPPCHECK_TRUE@	    *.cpp
 @HAVE_CPPCHECK_TRUE@	@echo "cppcheck completed, output in cppcheck.out and cppcheck.checkers"
-@HAVE_CPPCHECK_FALSE@	@echo "cppcheck is not installed. Install it to generate documentation."
+@HAVE_CPPCHECK_FALSE@	@echo "cppcheck is not installed. Install it to do analysis."
+
+# ====================== clang-tidy ======================
+# Clang-tidy requires a compile_commands.json to be set up.  We don't
+# want to rely on other tools to do so though.  So we create one.
+compile_commands.json:
+	-rm -f compile_commands.json
+	@echo '{' >> compile_commands.json
+	@echo '    "directory": "'`pwd`'","' >> compile_commands.json
+	@echo '    "file": "deduplog.cpp",' >> compile_commands.json
+	@echo '    "output": "deduplog.o",' >> compile_commands.json
+	@echo '    "arguments": [' >> compile_commands.json
+	@echo '        "/usr/lib/llvm-21/bin/clang",' >> compile_commands.json
+	@echo '        "-xc++",' >> compile_commands.json
+	@echo '        "deduplog.cpp",' >> compile_commands.json
+	@echo '        "-o",' >> compile_commands.json
+	@echo '        "deduplog.o",' >> compile_commands.json
+	@echo '        "--driver-mode=g++",' >> compile_commands.json
+	@echo '        "-c",' >> compile_commands.json
+	@echo '        "--target=x86_64-pc-linux-gnu"' >> compile_commands.json
+	@echo '    ]' >> compile_commands.json
+	@echo '}' >> compile_commands.json
+
+clang-tidy: compile_commands.json
+@HAVE_CLANGTIDY_TRUE@	-rm -f clang-tidy.out
+@HAVE_CLANGTIDY_TRUE@	clang-tidy -p . deduplog.cpp -- -std=c++11 > clang-tidy.out
+@HAVE_CLANGTIDY_FALSE@	@echo "clang-tidy is not installed. Install it to do analysis."
 
 # ====================== examples ======================
 examples: all

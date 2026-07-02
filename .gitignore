@@ -19,3 +19,4 @@ config.status
 documentation
 cppcheck.out
 cppcheck.checkers
+clang-tidy.out
