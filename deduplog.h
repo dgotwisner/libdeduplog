@@ -163,7 +163,8 @@ extern "C" {
      * @param [in] ...      Any arguments to pattern.
      *
      */
-    extern void LogImmediate(int level, const char *pattern, ...) __attribute__((format(printf, 2, 3)));
+    extern void LogImmediate(int level, const char *pattern,
+        ...) __attribute__((format(printf, 2, 3)));
 
     /** Log output immediately, bypassing the dedup logic with va_list input
      *

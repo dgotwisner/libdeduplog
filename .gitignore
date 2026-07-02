@@ -17,3 +17,5 @@ config.log
 config.status
 *.lo
 documentation
+cppcheck.out
+cppcheck.checkers

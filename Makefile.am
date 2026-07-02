@@ -43,6 +43,28 @@ else
 	@echo "doxygen is not installed. Install it to generate documentation."
 endif
 
+# ====================== cppcheck ======================
+# Note, we are turning off misra check because it doesn't
+# correctly work with C++ for Cppcheck - it's reporting comma
+# violations on the std::unordered_map lookup tables.
+#    --addon=misra
+cppcheck:
+if HAVE_CPPCHECK
+	cppcheck --enable=all --inconclusive --force --std=c++11 \
+	    --language=c++ -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 \
+	    --output-file=cppcheck.out --check-level=exhaustive -v \
+	    --addon=y2038 --addon=threadsafety \
+	    --library=std --checkers-report=cppcheck.checkers \
+	    --suppress=failedToEvaluate --suppress=missingIncludeSystem \
+	    --suppress=preprocessorErrorDirective \
+	    -D__has_builtin\(x\)=0 -D__has_include\(x\)=0 \
+	    -D__has_cpp_attribute\(x\)=0 -D__has_feature\(x\)=0 \
+	    *.cpp
+	@echo "cppcheck completed, output in cppcheck.out and cppcheck.checkers"
+else
+	@echo "cppcheck is not installed. Install it to generate documentation."
+endif
+
 # ====================== examples ======================
 examples: all
 	@echo "? Examples built: ./example/ctest  ./example/test"

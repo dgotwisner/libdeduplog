@@ -14,7 +14,7 @@ AC_LANG([C++])
 # Required for old (CentOS 7) libtool
 AM_PROG_AR
 
-CXXFLAGS="$CXXFLAGS -std=c++11 -O3 -Wall -Wextra -Werror"
+CXXFLAGS="$CXXFLAGS -std=c++11 -O3 -Wall -Wextra -Werror -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64"
 
 # Libtool for shared/static libraries
 LT_INIT([disable-static])
@@ -41,6 +41,9 @@ AM_CONDITIONAL([HAVE_ASTYLE], [test "x$HAVE_ASTYLE" = "xyes"])
 
 AC_CHECK_PROG([HAVE_DOXYGEN], [doxygen], [yes], [no])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x$HAVE_DOXYGEN" = "xyes"])
+
+AC_CHECK_PROG([HAVE_CPPCHECK], [cppcheck], [yes], [no])
+AM_CONDITIONAL([HAVE_CPPCHECK], [test "x$HAVE_CPPCHECK" = "xyes"])
 
 AC_CONFIG_FILES([Makefile example/Makefile deduplog.pc])
 AC_OUTPUT

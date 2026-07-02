@@ -82,7 +82,11 @@ s_tlsSet; // set of thread-local objects
 static std::mutex s_syslogMtx; // used to lock syslog for opensyslog()
 static bool isSyslogOpened = false;
 
-static const std::unordered_map<int, const char *> levelToLevelString = {
+// cppcheck-suppress misra-c2012-12.3
+typedef std::unordered_map<int, const char *> LTLSMap_t;
+
+// cppcheck-suppress misra-c2012-12.3
+static const LTLSMap_t levelToLevelString = {
     { LOG_EMERG, "<0> " },
     { LOG_ALERT, "<1> " },
     { LOG_CRIT, "<2> " },
@@ -93,7 +97,11 @@ static const std::unordered_map<int, const char *> levelToLevelString = {
     { LOG_DEBUG, "<7> " },
 };
 
-static const std::unordered_map<int, const char *> levelToLevelText = {
+// cppcheck-suppress misra-c2012-12.3
+typedef std::unordered_map<int, const char *> LTLTMap_t;
+
+// cppcheck-suppress misra-c2012-12.3
+static const LTLTMap_t levelToLevelText = {
     { LOG_EMERG, "Emergency " },
     { LOG_ALERT, "Alert " },
     { LOG_CRIT, "Critical " },
@@ -112,7 +120,8 @@ static const std::unordered_map<int, const char *> levelToLevelText = {
 // Each item is a unique message (unformatted)
 class UniqueItem final {
     public:
-        UniqueItem(const std::string &pattern):
+        UniqueItem(void) = delete;
+        explicit UniqueItem(const std::string &pattern):
             m_fmtPattern(pattern), m_lastOutputTime(time(NULL)),
             m_countSinceLastOutputTime(0) {
         }
@@ -129,16 +138,16 @@ class UniqueItem final {
         void setCount(uint64_t value) {
             m_countSinceLastOutputTime = value;
         }
-        uint64_t getCount(void) {
+        uint64_t getCount(void) const {
             return m_countSinceLastOutputTime;
         }
-        time_t getTime(void) {
+        time_t getTime(void) const {
             return m_lastOutputTime;
         }
         void setTime(time_t newTime) {
             m_lastOutputTime = newTime;
         }
-        const char *getPattern(void) {
+        const char *getPattern(void) const {
             return m_fmtPattern.c_str();
         }
     private:
@@ -235,8 +244,8 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                 countMsg += " times in ";
                 countMsg += std::to_string(now - fileMapIt.second.getTime());
                 countMsg += " seconds\n";
-
                 ssize_t ret;
+
                 switch (s_interface) {
                     case LI_STDERR:
                         ret = write(2, countMsg.c_str(), countMsg.size());
@@ -265,8 +274,8 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                         }
                         break;
                 }
-                (void)ret;
 
+                (void)ret;
                 // We will be deleting at the end of the loop, but reset here just in case.
                 fileMapIt.second.setCount(0);
                 fileMapIt.second.setTime(now);
@@ -396,7 +405,8 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
         // handler
     }
 
-    int srcIx = 0, dstIx = 0;
+    int srcIx = 0;
+    int dstIx = 0;
     struct iovec vec[iovcnt + 2];
     vec[dstIx].iov_base = const_cast<char *>(ltoS);
     vec[dstIx].iov_len = strlen(ltoS);
@@ -408,10 +418,12 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
     while (srcIx < iovcnt) {
         vec[dstIx].iov_base = iov[srcIx].iov_base;
         vec[dstIx].iov_len = iov[srcIx].iov_len;
-        srcIx++, dstIx++;
+        srcIx++;
+	dstIx++;
     }
 
     ssize_t ret;
+
     switch (s_interface) {
         case LI_STDERR:
         case LI_JOURNAL:
@@ -447,6 +459,7 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
             /*NOTREACHED*/
             break;
     }
+
     (void)ret; // eliminate compiler warning
 }
 
@@ -641,7 +654,6 @@ void LogDedupped(int level, int lineNumber, const char *filename,
 
     // we need this to see if we need to output or when adding something for the first time.
     time_t now = time(NULL);
-
     // First, see if the existing entry is in the TlsObj's m_msgMap, first for log level, then for
     // line number, and finally for filename.  If it's in all of them, simply bump the counter
     bool outputRecord = false; // default - we aren't outputting
@@ -715,8 +727,8 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                     countMsg += " times in ";
                     countMsg += std::to_string(now - existing.getTime());
                     countMsg += " seconds\n";
-
                     ssize_t ret;
+
                     switch (s_interface) {
                         case LI_STDERR:
                             ret = write(2, countMsg.c_str(), countMsg.size());
@@ -745,8 +757,8 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                             }
                             break;
                     }
-                    (void)ret;
 
+                    (void)ret;
                     existing.setCount(0);
                     existing.setTime(now);
                 }
@@ -848,7 +860,6 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
 
     // we need this to see if we need to output or when adding something for the first time.
     time_t now = time(NULL);
-
     // First, see if the existing entry is in the TlsObj's m_msgMap, first for log level, then for
     // line number, and finally for filename.  If it's in all of them, simply bump the counter
     bool outputRecord = false; // default - we aren't outputting
@@ -922,8 +933,8 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                     countMsg += " times in ";
                     countMsg += std::to_string(now - existing.getTime());
                     countMsg += " seconds\n";
-
                     ssize_t ret;
+
                     switch (s_interface) {
                         case LI_STDERR:
                             ret = write(2, countMsg.c_str(), countMsg.size());
@@ -952,8 +963,8 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                             }
                             break;
                     }
-                    (void) ret;
 
+                    (void) ret;
                     existing.setCount(0);
                     existing.setTime(now);
                 }
