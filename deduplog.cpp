@@ -246,7 +246,7 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                 countMsg += " seconds\n";
                 ssize_t ret;
 
-                switch (s_interface) {
+                switch (s_interface.load()) {
                     case LI_STDERR:
                         ret = write(2, countMsg.c_str(), countMsg.size());
                         break;
@@ -419,12 +419,12 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
         vec[dstIx].iov_base = iov[srcIx].iov_base;
         vec[dstIx].iov_len = iov[srcIx].iov_len;
         srcIx++;
-	dstIx++;
+        dstIx++;
     }
 
     ssize_t ret;
 
-    switch (s_interface) {
+    switch (s_interface.load()) {
         case LI_STDERR:
         case LI_JOURNAL:
             // Note, there is a hook for journal output
@@ -492,7 +492,7 @@ void LogImmediate(int level, const char *format, ...)
         ltoT = iLevelText->second;
     }
 
-    switch (s_interface) {
+    switch (s_interface.load()) {
         case LI_STDERR:
         case LI_STDOUT: {
                 va_list ap;
@@ -572,7 +572,7 @@ void LogImmediateVA(int level, const char *format, va_list ap)
         ltoT = iLevelText->second;
     }
 
-    switch (s_interface) {
+    switch (s_interface.load()) {
         case LI_STDERR:
         case LI_STDOUT: {
                 std::string s = ltoS;
@@ -729,7 +729,7 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                     countMsg += " seconds\n";
                     ssize_t ret;
 
-                    switch (s_interface) {
+                    switch (s_interface.load()) {
                         case LI_STDERR:
                             ret = write(2, countMsg.c_str(), countMsg.size());
                             break;
@@ -768,7 +768,7 @@ void LogDedupped(int level, int lineNumber, const char *filename,
 
     if (outputRecord) {
         // And now, if appropriate, output the record
-        switch (s_interface) {
+        switch (s_interface.load()) {
             case LI_STDERR:
             case LI_STDOUT: {
                     va_list ap;
@@ -935,7 +935,7 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                     countMsg += " seconds\n";
                     ssize_t ret;
 
-                    switch (s_interface) {
+                    switch (s_interface.load()) {
                         case LI_STDERR:
                             ret = write(2, countMsg.c_str(), countMsg.size());
                             break;
@@ -974,7 +974,7 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
 
     if (outputRecord) {
         // And now, if appropriate, output the record
-        switch (s_interface) {
+        switch (s_interface.load()) {
             case LI_STDERR:
             case LI_STDOUT: {
                     std::string s = ltoS;

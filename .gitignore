@@ -20,3 +20,4 @@ documentation
 cppcheck.out
 cppcheck.checkers
 clang-tidy.out
+compile_commands.json
