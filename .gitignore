@@ -12,7 +12,6 @@ autom4te.cache
 deduplog.pc
 .deps
 stamp-h1
-Makefile
 *~
 *.orig
 config.log
