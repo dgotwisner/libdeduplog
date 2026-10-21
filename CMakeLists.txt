@@ -23,6 +23,8 @@ check_include_files("sys/uio.h" HAVE_SYS_UIO_H)
 check_include_files("stdint.h" HAVE_STDINT_H)
 check_include_files("unistd.h" HAVE_UNISTD_H)
 check_include_files("string.h" HAVE_STRING_H)
+check_include_files("stdlib.h" HAVE_STDLIB_H)
+check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
 
 # 2. Check for systemd library if header is present
 if(HAVE_SYSTEMD_SD_JOURNAL_H)
