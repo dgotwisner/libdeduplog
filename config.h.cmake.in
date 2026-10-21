@@ -1,0 +1,11 @@
+/* config.h.cmake.in - Generated dynamically by CMake */
+#pragma once
+
+#cmakedefine HAVE_SYSLOG_H 1
+#cmakedefine HAVE_SYSTEMD_SD_JOURNAL_H 1
+#cmakedefine HAVE_STDIO_H 1
+#cmakedefine HAVE_SYS_UIO_H 1
+#cmakedefine HAVE_LIBSYSTEMD 1
+#cmakedefine HAVE_STDINT_H 1
+#cmakedefine HAVE_UNISTD_H 1
+#cmakedefine HAVE_STRING_H 1

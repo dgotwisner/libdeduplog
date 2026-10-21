@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libdeduplog
+Description: C / C++ deduplicating logging library supporting syslog and systemd-journald
+Version: @VERSION@
+Libs: -L${libdir} -ldeduplog
+Cflags: -I${includedir}
