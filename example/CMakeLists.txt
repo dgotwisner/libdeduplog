@@ -7,8 +7,8 @@ include_directories("${PROJECT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}")
 # C++ Test Binary
 # ==============================================================================
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
-    add_executable(test test.cpp)
-    target_link_libraries(test deduplog)
+    add_executable(cpptest test.cpp)
+    target_link_libraries(cpptest deduplog)
 endif()
 
 # ==============================================================================
@@ -28,8 +28,8 @@ endif()
 # ==============================================================================
 # Optional: Install Example Executables
 # ==============================================================================
-if(TARGET test)
-    install(TARGETS test RUNTIME DESTINATION bin)
+if(TARGET cpptest)
+    install(TARGETS cpptest RUNTIME DESTINATION bin)
 endif()
 if(TARGET ctest)
     install(TARGETS ctest RUNTIME DESTINATION bin)

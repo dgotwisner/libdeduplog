@@ -132,3 +132,39 @@ else()
     message(STATUS "cppcheck executable not found - 'make cppcheck' target will be unavailable")
 endif()
 
+####################################
+#
+#  Gtest stuff
+#
+####################################
+
+#cmake_minimum_required(VERSION 3.14)
+#project(deduplog CXX)
+
+#set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# --- Main Library/Target Code ---
+# (Keep your existing main library or executable targets here)
+# e.g., add_library(deduplog src/deduplog.cpp)
+
+# --- Unit Test Validation Setup ---
+# Check if GoogleTest and GoogleMock are available on the system
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTEST gtest QUIET)
+pkg_check_modules(GMOCK gmock QUIET)
+
+# Fallback checking if PkgConfig isn't matching modern targets
+if(NOT GTEST_FOUND)
+    find_package(GTest QUIET)
+endif()
+
+# Only build tests if both gtest and gmock targets are located
+if((GTEST_FOUND OR GTest_FOUND) AND GMOCK_FOUND)
+    message(STATUS "GoogleTest and GoogleMock found! Enabling unit tests.")
+    enable_testing()
+    add_subdirectory(tests)
+else()
+    message(WARNING "gtest or gmock not found. Skipping unit tests configuration.")
+endif()
+
