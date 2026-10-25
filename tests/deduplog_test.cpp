@@ -568,6 +568,18 @@ TEST_F(DedupLogCaptureTest, LogImmediateFormatsEveryStandardLevel)
     }
 }
 
+TEST_F(DedupLogCaptureTest, ForceAtexitLineCoverage) {
+    // EXPECT_EXIT forks a clean sub-process, running the lambda context natively.
+    // When the sub-process calls exit(), the OS cleanly fires the real atexit handlers!
+    EXPECT_EXIT({
+        // 1. Populate log metrics on the sub-process main thread
+        LogDedupped(LOG_NOTICE, __LINE__, __FILE__, "forced atexit pattern\n");
+
+        // 2. Call standard exit to trigger the runtime atexit registry loops naturally
+        std::exit(0);
+    }, ::testing::ExitedWithCode(0), ".*");
+}
+
 /*
 Note, when this program exits, there will be a number of messages of the
 form:

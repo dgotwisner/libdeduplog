@@ -35,3 +35,14 @@ if(TARGET ctest)
     install(TARGETS ctest RUNTIME DESTINATION bin)
 endif()
 
+if(USE_COVERAGE)
+    # ... your existing target options for deduplog and deduplog_test ...
+
+    # Instrument the C++ example binary (cpptest)
+    target_compile_options(cpptest PRIVATE -O0 --coverage)
+    target_link_options(cpptest PRIVATE --coverage)
+
+    # Instrument the C example binary (ctest)
+    target_compile_options(ctest PRIVATE -O0 --coverage)
+    target_link_options(ctest PRIVATE --coverage)
+endif()

@@ -231,10 +231,9 @@ if(USE_COVERAGE)
     target_link_options(deduplog_test PRIVATE --coverage)
 
     # Check the compiler version dynamically to safely inject the right flags
- if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "15.0.0")
-    # Capture engine needs the line-matching and intermediate gcov rules
-    set(LCOV_CAPTURE_FLAGS "--ignore-errors;inconsistent,gcov;--rc;derive_function_end_line=0")
-    # Filtration engine only needs the line-mismatch tolerances
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "15.0.0")
+    # Add 'negative' to the list to tolerate multi-binary profile merge side-effects
+    set(LCOV_CAPTURE_FLAGS "--ignore-errors;inconsistent,gcov,negative;--rc;derive_function_end_line=0")
     set(LCOV_FILTER_FLAGS "--ignore-errors;unused,inconsistent,gcov")
 else()
     set(LCOV_CAPTURE_FLAGS "")
@@ -244,7 +243,18 @@ endif()
     # Set up the 'make coverage' target with GCC 15 support
     add_custom_target(coverage
 	COMMAND ${LCOV_PATH} --directory "${PROJECT_BINARY_DIR}" --zerocounters
+
+	# This is the unit tests when run through coverage.  Because
+	# of gtest and gmock getting in the way, we don't get
+	# sufficient coverage for the dedup timers or thread
+	# completion (or program termination).
 	COMMAND "${PROJECT_BINARY_DIR}/tests/deduplog_test"
+
+	# Add the real example programs to the coverage run -- these
+	# don't mock or anything, so your logger(s) will show messages
+	# there as a result of these runs.
+        COMMAND "${PROJECT_BINARY_DIR}/example/cpptest"
+	COMMAND "${PROJECT_BINARY_DIR}/example/ctest"
 	
 	# Pass capture-specific options here
 	COMMAND ${LCOV_PATH} --directory "${PROJECT_BINARY_DIR}" --capture --output-file "${PROJECT_BINARY_DIR}/coverage.info" ${LCOV_CAPTURE_FLAGS}

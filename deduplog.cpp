@@ -168,7 +168,6 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
 class TlsObj final {
     public:
         TlsObj(void) {
-            //printf("Constructing thread local object - tid = %d\n", gettid());
             std::lock_guard<std::mutex> lock(s_mtx);
             s_tlsSet.emplace(this);
         }
@@ -185,7 +184,6 @@ class TlsObj final {
                 s_tlsSet.erase(this);
             }
 
-            //printf("Destroying thread local object - tid = %d\n", gettid());
         }
     public: // should be private, change later
         LevelMap_t m_msgMap;
@@ -297,7 +295,6 @@ t_tlsObj; // There is a single variable overlaying all
 static std::atomic<int> s_shutdownRegistered(0);
 static void shutdownCleanup(void)
 {
-    //printf("SHUTTING DOWN CLEANUP - tid %d\n", gettid());
     std::string countMsg;
     countMsg.reserve(1024);
     // we need this to see if we need to output or when adding something for the first time.
@@ -306,14 +303,11 @@ static void shutdownCleanup(void)
     // the counts, and then remove the items.
     std::lock_guard<std::mutex> lock(s_mtx);
 
-    //printf("--- s_tlsSet.size() == %lu\n", s_tlsSet.size());
     for (auto &tlsIt : s_tlsSet) {
-        //printf("--- s_tlsSet entrie's m_msgMap.size() == %lu\n", tlsIt->m_msgMap.size());
         printSingleMsgMap(tlsIt->m_msgMap, true, countMsg, now);
         tlsIt->m_msgMap.clear();  // clear the map, but don't delete the actual TLS objects.
     }
 
-    //printf("FINISHED WITH SHUTTING DOWN CLEANUP\n");
 }
 
 // Note, we don't allow collapsing messages by more than an hour
@@ -671,7 +665,6 @@ void LogDedupped(int level, int lineNumber, const char *filename,
         // not found, so build up the entire hierarchy
         UniqueItem item(pattern);
         item.set(pattern, now, 1);
-        //printf("__ tid=%d_ 1/adding new item to tlsObj's msgmap (no entry for log level %d): pattern '%s'\n", gettid(), level, pattern);
         fileMap.emplace(filename, std::move(item));
         lineMap.emplace(lineNumber, std::move(fileMap));
         t_tlsObj.m_msgMap.emplace(level, std::move(lineMap));
@@ -689,7 +682,6 @@ void LogDedupped(int level, int lineNumber, const char *filename,
             fileMap.emplace(filename, std::move(item));
             lineMapRef.emplace(lineNumber, std::move(fileMap));
             outputRecord = true;
-            //printf("__ tid=%d_ 2/adding new item to tlsObj's msgmap (no entry for log level %d's line number %d): pattern '%s'\n", gettid(), level, lineNumber, pattern);
         } else {
             // level and line number are found, now look at the filename.
             FileMap_t &fileMapRef = lineIt->second;
@@ -701,17 +693,14 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                 item.set(pattern, now, 1);
                 fileMapRef.emplace(filename, std::move(item));
                 outputRecord = true;
-                //printf("__ tid=%d_ 3/adding new item to tlsObj's msgmap (no entry for log level %d's line number %d for filename %s): pattern '%s'\n", gettid(), level, lineNumber, filename, pattern);
             } else {
                 // level line number, and filename are found, simply bump counters and, if appropriate,
                 // reset counter and flag for output
-                //printf("__ tid=%d_ 4/found in map already for log level %d, line number %d, filename %s: pattern '%s'\n", gettid(), level, lineNumber, filename, pattern);
                 UniqueItem &existing = fileIt->second;
                 existing.incCount();
 
                 if ((existing.getCount() > 1) &&
                     ((time_t)(existing.getTime() + s_timeThreshold) < now)) {
-                    //printf("__ tid=%d_ 5/time elapsed, outputing \"count\" message\n", gettid());
                     // time elapsed, so dump "count message" and reset start time to now and reset count
                     // to 0.
                     std::string countMsg;
@@ -881,7 +870,6 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
         // not found, so build up the entire hierarchy
         UniqueItem item(pattern);
         item.set(pattern, now, 1);
-        //printf("__ tid=%d_ 1/adding new item to tlsObj's msgmap (no entry for log level %d): pattern '%s'\n", gettid(), level, pattern);
         fileMap.emplace(filename, std::move(item));
         lineMap.emplace(lineNumber, std::move(fileMap));
         t_tlsObj.m_msgMap.emplace(level, std::move(lineMap));
@@ -899,7 +887,6 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
             fileMap.emplace(filename, std::move(item));
             lineMapRef.emplace(lineNumber, std::move(fileMap));
             outputRecord = true;
-            //printf("__ tid=%d_ 2/adding new item to tlsObj's msgmap (no entry for log level %d's line number %d): pattern '%s'\n", gettid(), level, lineNumber, pattern);
         } else {
             // level and line number are found, now look at the filename.
             FileMap_t &fileMapRef = lineIt->second;
@@ -911,17 +898,14 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                 item.set(pattern, now, 1);
                 fileMapRef.emplace(filename, std::move(item));
                 outputRecord = true;
-                //printf("__ tid=%d_ 3/adding new item to tlsObj's msgmap (no entry for log level %d's line number %d for filename %s): pattern '%s'\n", gettid(), level, lineNumber, filename, pattern);
             } else {
                 // level line number, and filename are found, simply bump counters and, if appropriate,
                 // reset counter and flag for output
-                //printf("__ tid=%d_ 4/found in map already for log level %d, line number %d, filename %s: pattern '%s'\n", gettid(), level, lineNumber, filename, pattern);
                 UniqueItem &existing = fileIt->second;
                 existing.incCount();
 
                 if ((existing.getCount() > 1) &&
                     ((time_t)(existing.getTime() + s_timeThreshold) < now)) {
-                    //printf("__ tid=%d_ 5/time elapsed, outputing \"count\" message\n", gettid());
                     // time elapsed, so dump "count message" and reset start time to now and reset count
                     // to 0.
                     std::string countMsg;

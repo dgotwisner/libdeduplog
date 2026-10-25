@@ -19,6 +19,7 @@
 #endif // HAVE_UNISTD_H
 
 #include <thread>
+#include <vector>
 
 #include "deduplog.h"
 
@@ -32,6 +33,24 @@ void fcn(int threadNum)
     }
 
     printf("Fcn(%d) is returning\n", threadNum);
+}
+
+static void logDeduppedVaHelper(int level, int lineNumber,
+    const char *filename,
+    const char *pattern, ...)
+{
+    va_list ap;
+    va_start(ap, pattern);
+    LogDeduppedVA(level, lineNumber, filename, pattern, ap);
+    va_end(ap);
+}
+
+static void logImmediateVaHelper(int level, const char *pattern, ...)
+{
+    va_list ap;
+    va_start(ap, pattern);
+    LogImmediateVA(level, pattern, ap);
+    va_end(ap);
 }
 
 // Note, this is the initial test program, and is single threaded
@@ -108,6 +127,30 @@ int main(int ac, char **av)
                 printf("Deleted thread %d\n", i);
                 threads[i] = NULL;
             }
+        }
+    }
+    {
+        setLogLevel(LOG_DEBUG); // only report DEBUG on up
+        std::vector<LoggerInterface_t> interfaces = { LI_STDOUT, LI_STDERR, LI_SYSLOG, LI_JOURNAL };
+        int pseudoLineNumber = 0;
+        for (LoggerInterface_t interface_val: interfaces) {
+            if (setLoggerInterface(interface_val) == 1) {
+                LogDedupped(LOG_DEBUG, pseudoLineNumber % 4, "file1.cpp", "LogDedupped: Cycling interface matrix lines\n");
+                logDeduppedVaHelper(LOG_DEBUG, (pseudoLineNumber % 4) + 10, "file2.cpp", "LogDedupped: Cycling interface matrix lines\n");
+                LogImmediate(LOG_DEBUG, "LogImmediate: Cycling interface matrix lines\n");
+                logImmediateVaHelper(LOG_DEBUG, "LogDedupped: Cycling interface matrix lines\n");
+                {
+                    struct iovec iov[2];
+                    iov[0].iov_base = const_cast<char *>("LogSafe ");
+                    iov[1].iov_base = const_cast<char *>("cycling interface matrix lines\n");
+
+                    for (unsigned i = 0; i < dim(iov); i++) {
+                        iov[i].iov_len = strlen(reinterpret_cast<const char *>(iov[i].iov_base));
+                    }
+                    LogSafe(LOG_DEBUG, iov, dim(iov));
+                }
+            }
+            pseudoLineNumber++;
         }
     }
     return 0;
