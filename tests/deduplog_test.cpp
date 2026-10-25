@@ -202,22 +202,39 @@ TEST_F(DedupLogCaptureTest, LogImmediateUsesMockedVfprintfHook)
 {
     auto &shim = SyscallShim::instance();
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
-    testing::MockFunction<int(FILE *, int, const char *, va_list)>
-    vfprintfChkMock;
-    shim.setVfprintfChkHook([&shim, &vfprintfChkMock](FILE * stream, int flag,
-    const char *format, va_list ap) {
+
+    // Declare mocks for both the standard and fortified variants
+    testing::MockFunction<int(FILE *, const char *, va_list)> vfprintfMock;
+    testing::MockFunction<int(FILE *, int, const char *, va_list)> vfprintfChkMock;
+
+    // Hook the standard vfprintf path (used under -O0 / coverage)
+    shim.setVfprintfHook([&shim, &vfprintfMock](FILE *stream, const char *format, va_list ap) {
+        return vfprintfMock.Call(stream, format, ap);
+    });
+
+    // Hook the fortified __vfprintf_chk path (used under -O3 / production)
+    shim.setVfprintfChkHook([&shim, &vfprintfChkMock](FILE *stream, int flag, const char *format, va_list ap) {
         return vfprintfChkMock.Call(stream, flag, format, ap);
     });
-    EXPECT_CALL(vfprintfChkMock, Call(testing::NotNull(), testing::_,
-        testing::NotNull(), testing::_))
-    .Times(1)
+
+    // Expectation for the unoptimized path
+    EXPECT_CALL(vfprintfMock, Call(testing::NotNull(), testing::_, testing::_))
+    .Times(testing::AtMost(1))
     .WillOnce(testing::Invoke(
-    [&shim](FILE * stream, int flag, const char *format, va_list ap) {
+    [&shim](FILE *stream, const char *format, va_list ap) {
+        return shim.defaultVfprintfHook(stream, format, ap);
+    }));
+
+    // Expectation for the optimized path
+    EXPECT_CALL(vfprintfChkMock, Call(testing::NotNull(), testing::_, testing::NotNull(), testing::_))
+    .Times(testing::AtMost(1))
+    .WillOnce(testing::Invoke(
+    [&shim](FILE *stream, int flag, const char *format, va_list ap) {
         return shim.defaultVfprintfChkHook(stream, flag, format, ap);
     }));
+
     LogImmediate(LOG_NOTICE, "mocked fprintf path\n");
-    EXPECT_THAT(shim.stdoutCapture(),
-        ::testing::HasSubstr("mocked fprintf path"));
+    EXPECT_THAT(shim.stdoutCapture(), ::testing::HasSubstr("mocked fprintf path"));
 }
 
 #ifdef HAVE_SYSLOG_H

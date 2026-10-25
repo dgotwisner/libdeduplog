@@ -169,3 +169,92 @@ else()
     message(WARNING "gtest or gmock not found. Skipping unit tests configuration.")
 endif()
 
+# -----------------------------------------------------------------------------
+# Compiler Sanitizer Support Configuration - do this from inside the Build
+# directory
+# -----------------------------------------------------------------------------
+# To run ASAN:Y rm -rf * && cmake -DUSE_ASAN=on -B . .. && make && ./tests/deduplog_test
+# To run TSAN: rm -rf * && cmake -DUSE_TSAN=on -B . .. && make && ./tests/deduplog_test
+# To run MSAN: rm -rf * && cmake -DUSE_MSAN=on -B . .. && make && ./tests/deduplog_test
+# To run UBSAN: rm -rf * && cmake -DUSE_UBSAN=on -B . .. && make && ./tests/deduplog_test
+
+# Note, ASAN, TSAN, and UBSAN are clean.  I don't have CLANG installed, so
+# can't actually prove out MSAN at this time.
+
+# Protect MSan from being invoked on GCC
+if(USE_MSAN AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "MemorySanitizer (MSAN) requires the Clang compiler!")
+endif()
+
+if(USE_ASAN)
+    # Combine ASan + LeakSanitizer + UBSan (Excellent catch-all group)
+    set(SAN_FLAGS "-fsanitize=address,leak,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+    
+elseif(USE_TSAN)
+    # Combine TSan + UBSan (Data races + Undefined behavior checking together)
+    set(SAN_FLAGS "-fsanitize=thread,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+    
+elseif(USE_MSAN)
+    # MSan stands completely alone (Cannot combine with ASan/TSan)
+    set(SAN_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins=2 -fno-omit-frame-pointer")
+    
+elseif(USE_UBSAN)
+    # Pure UBSan standalone option
+    set(SAN_FLAGS "-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+endif()
+
+if(SAN_FLAGS)
+    add_compile_options(${SAN_FLAGS})
+    add_link_options(${SAN_FLAGS})
+endif()
+
+option(USE_COVERAGE "Enable code coverage instrumentation" OFF)
+
+if(USE_COVERAGE)
+    # To run Coverage (Gcov/lcov):
+    #	rm -rf *
+    #	cmake -DUSE_COVERAGE=on -B . ..
+    #	make && make coverage
+
+    # Ensure lcov and genhtml are available on the VM
+    find_program(LCOV_PATH lcov REQUIRED)
+    find_program(GENHTML_PATH genhtml REQUIRED)
+
+    message(STATUS "Code coverage active: Hard-injecting target-level flags.")
+
+    # Force compiler and linker flags strictly at the target level to ensure visibility
+    target_compile_options(deduplog PRIVATE -O0 --coverage)
+    target_link_options(deduplog PRIVATE --coverage)
+
+    # Do the exact same for your test binary target
+    target_compile_options(deduplog_test PRIVATE -O0 --coverage)
+    target_link_options(deduplog_test PRIVATE --coverage)
+
+    # Check the compiler version dynamically to safely inject the right flags
+ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "15.0.0")
+    # Capture engine needs the line-matching and intermediate gcov rules
+    set(LCOV_CAPTURE_FLAGS "--ignore-errors;inconsistent,gcov;--rc;derive_function_end_line=0")
+    # Filtration engine only needs the line-mismatch tolerances
+    set(LCOV_FILTER_FLAGS "--ignore-errors;unused,inconsistent,gcov")
+else()
+    set(LCOV_CAPTURE_FLAGS "")
+    set(LCOV_FILTER_FLAGS "--ignore-errors;unused")
+endif()
+
+    # Set up the 'make coverage' target with GCC 15 support
+    add_custom_target(coverage
+	COMMAND ${LCOV_PATH} --directory "${PROJECT_BINARY_DIR}" --zerocounters
+	COMMAND "${PROJECT_BINARY_DIR}/tests/deduplog_test"
+	
+	# Pass capture-specific options here
+	COMMAND ${LCOV_PATH} --directory "${PROJECT_BINARY_DIR}" --capture --output-file "${PROJECT_BINARY_DIR}/coverage.info" ${LCOV_CAPTURE_FLAGS}
+	
+	# Pass filter-specific options here
+	COMMAND ${LCOV_PATH} --remove "${PROJECT_BINARY_DIR}/coverage.info" '/usr/*' '*/tests/*' '*/googletest/*' --output-file "${PROJECT_BINARY_DIR}/coverage_filtered.info" ${LCOV_FILTER_FLAGS}
+	
+	COMMAND ${GENHTML_PATH} "${PROJECT_BINARY_DIR}/coverage_filtered.info" --output-directory "${PROJECT_BINARY_DIR}/coverage_html"
+	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
+	COMMENT "Generating HTML code coverage report in build/coverage_html/index.html..."
+    )
+
+endif()
