@@ -67,6 +67,10 @@ namespace {
             }
 
             void TearDown(void) override {
+		// This single call clears stdout, stderr, and syslog capture buffers perfectly
+		SyscallShim::instance().setCaptureEnabled(false);
+		SyscallShim::instance().clearCaptures();
+
                 SyscallShim::instance().reset();
             }
     };
@@ -513,6 +517,9 @@ TEST_F(DedupLogCaptureTest, ThreadShutdownFlushesPendingDuplicateCounts)
         ::testing::HasSubstr("worker duplicate"));
     EXPECT_THAT(shim.stdoutCapture(),
         ::testing::HasSubstr("occurred 2 times"));
+    // Now your output capture buffer has the clean shutdown summary text,
+    // and you can assert against it or let it flush normally while shims are alive.
+    EXPECT_THAT(SyscallShim::instance().stdoutCapture(), testing::HasSubstr("worker duplicate"));
 }
 
 // ====================== All standard log levels ======================
@@ -543,6 +550,22 @@ TEST_F(DedupLogCaptureTest, LogImmediateFormatsEveryStandardLevel)
                 << "missing token for level " << entry.level;
     }
 }
+
+/*
+Note, when this program exits, there will be a number of messages of the
+form:
+	... At thread shutdown, the following message pattern (... summary)
+    		from file tests/file_a.cpp, line ... occurred N times in M
+		seconds
+
+This is correct behavior, but, Gtest and Gmock don't manage threads in a
+manner that is compatible with the library.  Internally, the library
+manages duplicates via thread-local storage and essentially has an atexit
+hook to deal with having the log data going out correctly at program
+termination.  Because the I/O is mocked, and the threading doesn't shut down
+consistent with how non-mocked stuff is normally shut down, these messages
+will leak, and, the timestamps will be wrong.
+*/
 
 int main(int argc, char **argv)
 {

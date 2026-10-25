@@ -60,9 +60,9 @@
 #endif // HAVE_SYS_UIO_H
 #include <sys/types.h>
 //#include <sys/syscall.h> // only needed for gettid() which is used for debugging
-#ifdef HAVE_SYSTEMD
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
     #include <systemd/sd-journal.h>
-#endif // HAVE_SYSTEMD
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 #include <unistd.h>
 
 #include "deduplog.h"
@@ -255,12 +255,13 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                         ret = write(1, countMsg.c_str(), countMsg.size());
                         break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
                     case LI_JOURNAL:
-#ifdef HAVE_SYSTEMD
                         sd_journal_print(level, countMsg.c_str());
-#endif // HAVE_SYSTEMD
                         break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
                     case LI_SYSLOG: {
                             {
                                 std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -273,6 +274,7 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                             syslog(level, "%s", countMsg.c_str());
                         }
                         break;
+#endif // HAVE_SYSLOG_H
                 }
 
                 (void)ret;
@@ -354,13 +356,13 @@ LoggerInterface_t getLoggerInterface(void)
 int setLoggerInterface(LoggerInterface_t interface)
 {
     switch (interface) {
-#ifdef HAVE_SYSLOG_H
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
         case LI_JOURNAL:
-#endif // HAVE_SYSLOG_H
-#ifdef HAVE_SYSTEMD
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
+#ifdef HAVE_SYSLOG_H
         case LI_SYSLOG:
-#endif // HAVE_SYSTEMD
+#endif // HAVE_SYSLOG_H
         case LI_STDERR:
         case LI_STDOUT:
             s_interface = interface;
@@ -431,27 +433,27 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
             // that if we write to stderr, it does the right
             // thing.  From experience, the <N> gets converted
             // into the log level part of the journal message.
-#ifdef HAVE_WRITEV
+#ifdef HAVE_SYS_UIO_H
             ret = writev(2, vec, iovcnt + 2);
 #else
 
-            for (int i = 0; i < iovcnt; i++) {
+            for (int i = 0; i < iovcnt+2; i++) {
                 ret = write(2, vec[i].iov_base, vec[i].iov_len);
             }
 
-#endif // HAVE_WRITEV
+#endif // HAVE_SYS_UIO_H
             break;
 
         case LI_STDOUT:
-#ifdef HAVE_WRITEV
+#ifdef HAVE_SYS_UIO_H
             ret = writev(1, vec, iovcnt + 2);
 #else
 
-            for (int i = 0; i < iovcnt; i++) {
+            for (int i = 0; i < iovcnt+2; i++) {
                 ret = write(1, vec[i].iov_base, vec[i].iov_len);
             }
 
-#endif // HAVE_WRITEV
+#endif // HAVE_SYS_UIO_H
             break;
 
         case LI_SYSLOG:
@@ -508,8 +510,8 @@ void LogImmediate(int level, const char *format, ...)
             }
             break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
         case LI_JOURNAL: {
-#ifdef HAVE_SYSTEMD
                 va_list ap;
                 va_start(ap, format);
                 std::string s = ltoS;
@@ -517,10 +519,11 @@ void LogImmediate(int level, const char *format, ...)
                 s += format;
                 sd_journal_printv(level, s.c_str(), ap);
                 va_end(ap);
-#endif // HAVE_SYSTEMD
             }
             break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
         case LI_SYSLOG: {
                 {
                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -540,6 +543,7 @@ void LogImmediate(int level, const char *format, ...)
             }
             /*NOTREACHED*/
             break;
+#endif // HAVE_SYSLOG_H
     }
 }
 
@@ -585,16 +589,17 @@ void LogImmediateVA(int level, const char *format, va_list ap)
             }
             break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
         case LI_JOURNAL: {
-#ifdef HAVE_SYSTEMD
                 std::string s = ltoS;
                 s += ltoT;
                 s += format;
                 sd_journal_printv(level, s.c_str(), ap);
-#endif // HAVE_SYSTEMD
             }
             break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
         case LI_SYSLOG: {
                 {
                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -611,6 +616,7 @@ void LogImmediateVA(int level, const char *format, va_list ap)
             }
             /*NOTREACHED*/
             break;
+#endif // HAVE_SYSLOG_H
     }
 }
 
@@ -738,12 +744,13 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                             ret = write(1, countMsg.c_str(), countMsg.size());
                             break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
                         case LI_JOURNAL:
-#ifdef HAVE_SYSTEMD
                             sd_journal_print(level, countMsg.c_str());
-#endif // HAVE_SYSTEMD
                             break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
                         case LI_SYSLOG: {
                                 {
                                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -756,6 +763,7 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                                 syslog(level, "%s", countMsg.c_str());
                             }
                             break;
+#endif // HAVE_SYSLOG_H
                     }
 
                     (void)ret;
@@ -784,8 +792,8 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                 }
                 break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
             case LI_JOURNAL: {
-#ifdef HAVE_SYSTEMD
                     va_list ap;
                     va_start(ap, pattern);
                     std::string s = ltoS;
@@ -793,10 +801,11 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                     s += pattern;
                     sd_journal_printv(level, s.c_str(), ap);
                     va_end(ap);
-#endif // HAVE_SYSTEMD
                 }
                 break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
             case LI_SYSLOG: {
                     {
                         std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -816,6 +825,7 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                 }
                 /*NOTREACHED*/
                 break;
+#endif // HAVE_SYSLOG_H
         }
     }
 }
@@ -944,12 +954,13 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                             ret = write(1, countMsg.c_str(), countMsg.size());
                             break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
                         case LI_JOURNAL:
-#ifdef HAVE_SYSTEMD
                             sd_journal_print(level, countMsg.c_str());
-#endif // HAVE_SYSTEMD
                             break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
                         case LI_SYSLOG: {
                                 {
                                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -962,6 +973,7 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                                 syslog(level, "%s", countMsg.c_str());
                             }
                             break;
+#endif // HAVE_SYSLOG_H
                     }
 
                     (void) ret;
@@ -987,16 +999,17 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                 }
                 break;
 
+#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
             case LI_JOURNAL: {
-#ifdef HAVE_SYSTEMD
                     std::string s = ltoS;
                     s += ltoT;
                     s += pattern;
                     sd_journal_printv(level, s.c_str(), ap);
-#endif // HAVE_SYSTEMD
                 }
                 break;
+#endif // HAVE_SYSTEMD_SD_JOURNAL_H
 
+#ifdef HAVE_SYSLOG_H
             case LI_SYSLOG: {
                     {
                         std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -1013,6 +1026,7 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                 }
                 /*NOTREACHED*/
                 break;
+#endif // HAVE_SYSLOG_H
         }
     }
 }

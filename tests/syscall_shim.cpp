@@ -453,3 +453,9 @@ extern "C" void __wrap_vsyslog(int priority, const char *format,
 {
     SyscallShim::instance().invokeVsyslogHook(priority, format, ap);
 }
+extern "C" void __wrap___vsyslog_chk(int priority, int flag, const char *format, va_list ap) {
+    // Forward directly to your existing wrap hook logic or mock handler
+    // e.g., if __wrap_vsyslog just invokes your Mock instance, do that here:
+    (void)flag;
+    __wrap_vsyslog(priority, format, ap);
+}

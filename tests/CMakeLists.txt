@@ -48,6 +48,7 @@ target_link_options(deduplog_test PRIVATE
     "LINKER:--wrap=fflush"
     "LINKER:--wrap=openlog"
     "LINKER:--wrap=vsyslog"
+    "LINKER:--wrap=__vsyslog_chk"
 )
 
 # 5. Bind GoogleTest, GoogleMock, and System library requirements (LDLIBS)
