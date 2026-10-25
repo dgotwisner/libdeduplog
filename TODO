@@ -1,8 +1,3 @@
-Add Unit tests to platform and CMakefiles.
-Add Asan/tsan/ubsan
-Add gcov/lcov
-Resolve CPPCheck issues
-
 Various build environments:
     Get building for Mac / BSD
     Get building with Visual Studio for a pure (DLL) Windows target

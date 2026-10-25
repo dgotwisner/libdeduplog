@@ -133,12 +133,16 @@ int main(int ac, char **av)
         setLogLevel(LOG_DEBUG); // only report DEBUG on up
         std::vector<LoggerInterface_t> interfaces = { LI_STDOUT, LI_STDERR, LI_SYSLOG, LI_JOURNAL };
         int pseudoLineNumber = 0;
-        for (LoggerInterface_t interface_val: interfaces) {
+
+        for (LoggerInterface_t interface_val : interfaces) {
             if (setLoggerInterface(interface_val) == 1) {
-                LogDedupped(LOG_DEBUG, pseudoLineNumber % 4, "file1.cpp", "LogDedupped: Cycling interface matrix lines\n");
-                logDeduppedVaHelper(LOG_DEBUG, (pseudoLineNumber % 4) + 10, "file2.cpp", "LogDedupped: Cycling interface matrix lines\n");
+                LogDedupped(LOG_DEBUG, pseudoLineNumber % 4, "file1.cpp",
+                    "LogDedupped: Cycling interface matrix lines\n");
+                logDeduppedVaHelper(LOG_DEBUG, (pseudoLineNumber % 4) + 10, "file2.cpp",
+                    "LogDedupped: Cycling interface matrix lines\n");
                 LogImmediate(LOG_DEBUG, "LogImmediate: Cycling interface matrix lines\n");
-                logImmediateVaHelper(LOG_DEBUG, "LogDedupped: Cycling interface matrix lines\n");
+                logImmediateVaHelper(LOG_DEBUG,
+                    "LogDedupped: Cycling interface matrix lines\n");
                 {
                     struct iovec iov[2];
                     iov[0].iov_base = const_cast<char *>("LogSafe ");
@@ -147,9 +151,11 @@ int main(int ac, char **av)
                     for (unsigned i = 0; i < dim(iov); i++) {
                         iov[i].iov_len = strlen(reinterpret_cast<const char *>(iov[i].iov_base));
                     }
+
                     LogSafe(LOG_DEBUG, iov, dim(iov));
                 }
             }
+
             pseudoLineNumber++;
         }
     }

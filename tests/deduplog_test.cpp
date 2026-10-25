@@ -67,10 +67,9 @@ namespace {
             }
 
             void TearDown(void) override {
-		// This single call clears stdout, stderr, and syslog capture buffers perfectly
-		SyscallShim::instance().setCaptureEnabled(false);
-		SyscallShim::instance().clearCaptures();
-
+                // This single call clears stdout, stderr, and syslog capture buffers perfectly
+                SyscallShim::instance().setCaptureEnabled(false);
+                SyscallShim::instance().clearCaptures();
                 SyscallShim::instance().reset();
             }
     };
@@ -202,39 +201,38 @@ TEST_F(DedupLogCaptureTest, LogImmediateUsesMockedVfprintfHook)
 {
     auto &shim = SyscallShim::instance();
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
-
     // Declare mocks for both the standard and fortified variants
     testing::MockFunction<int(FILE *, const char *, va_list)> vfprintfMock;
-    testing::MockFunction<int(FILE *, int, const char *, va_list)> vfprintfChkMock;
-
+    testing::MockFunction<int(FILE *, int, const char *, va_list)>
+    vfprintfChkMock;
     // Hook the standard vfprintf path (used under -O0 / coverage)
-    shim.setVfprintfHook([&shim, &vfprintfMock](FILE *stream, const char *format, va_list ap) {
+    shim.setVfprintfHook([&shim, &vfprintfMock](FILE * stream,
+    const char *format, va_list ap) {
         return vfprintfMock.Call(stream, format, ap);
     });
-
     // Hook the fortified __vfprintf_chk path (used under -O3 / production)
-    shim.setVfprintfChkHook([&shim, &vfprintfChkMock](FILE *stream, int flag, const char *format, va_list ap) {
+    shim.setVfprintfChkHook([&shim, &vfprintfChkMock](FILE * stream, int flag,
+    const char *format, va_list ap) {
         return vfprintfChkMock.Call(stream, flag, format, ap);
     });
-
     // Expectation for the unoptimized path
     EXPECT_CALL(vfprintfMock, Call(testing::NotNull(), testing::_, testing::_))
     .Times(testing::AtMost(1))
     .WillOnce(testing::Invoke(
-    [&shim](FILE *stream, const char *format, va_list ap) {
+    [&shim](FILE * stream, const char *format, va_list ap) {
         return shim.defaultVfprintfHook(stream, format, ap);
     }));
-
     // Expectation for the optimized path
-    EXPECT_CALL(vfprintfChkMock, Call(testing::NotNull(), testing::_, testing::NotNull(), testing::_))
+    EXPECT_CALL(vfprintfChkMock, Call(testing::NotNull(), testing::_,
+            testing::NotNull(), testing::_))
     .Times(testing::AtMost(1))
     .WillOnce(testing::Invoke(
-    [&shim](FILE *stream, int flag, const char *format, va_list ap) {
+    [&shim](FILE * stream, int flag, const char *format, va_list ap) {
         return shim.defaultVfprintfChkHook(stream, flag, format, ap);
     }));
-
     LogImmediate(LOG_NOTICE, "mocked fprintf path\n");
-    EXPECT_THAT(shim.stdoutCapture(), ::testing::HasSubstr("mocked fprintf path"));
+    EXPECT_THAT(shim.stdoutCapture(),
+        ::testing::HasSubstr("mocked fprintf path"));
 }
 
 #ifdef HAVE_SYSLOG_H
@@ -292,9 +290,13 @@ TEST_F(DedupLogCaptureTest, LogSafeJournalAliasWritesToStderrFd)
     struct iovec iov[1];
 
     iov[0].iov_base = const_cast<char *>("journal alias\n");
+
     iov[0].iov_len = strlen("journal alias\n");
+
     LogSafe(LOG_INFO, iov, 1);
+
     EXPECT_TRUE(SyscallShim::instance().stdoutCapture().empty());
+
     EXPECT_THAT(SyscallShim::instance().stderrCapture(),
         ::testing::HasSubstr("<6> Info journal alias"));
 }
@@ -536,7 +538,8 @@ TEST_F(DedupLogCaptureTest, ThreadShutdownFlushesPendingDuplicateCounts)
         ::testing::HasSubstr("occurred 2 times"));
     // Now your output capture buffer has the clean shutdown summary text,
     // and you can assert against it or let it flush normally while shims are alive.
-    EXPECT_THAT(SyscallShim::instance().stdoutCapture(), testing::HasSubstr("worker duplicate"));
+    EXPECT_THAT(SyscallShim::instance().stdoutCapture(),
+        testing::HasSubstr("worker duplicate"));
 }
 
 // ====================== All standard log levels ======================
@@ -568,7 +571,8 @@ TEST_F(DedupLogCaptureTest, LogImmediateFormatsEveryStandardLevel)
     }
 }
 
-TEST_F(DedupLogCaptureTest, ForceAtexitLineCoverage) {
+TEST_F(DedupLogCaptureTest, ForceAtexitLineCoverage)
+{
     // EXPECT_EXIT forks a clean sub-process, running the lambda context natively.
     // When the sub-process calls exit(), the OS cleanly fires the real atexit handlers!
     EXPECT_EXIT({
@@ -583,9 +587,9 @@ TEST_F(DedupLogCaptureTest, ForceAtexitLineCoverage) {
 /*
 Note, when this program exits, there will be a number of messages of the
 form:
-	... At thread shutdown, the following message pattern (... summary)
-    		from file tests/file_a.cpp, line ... occurred N times in M
-		seconds
+    ... At thread shutdown, the following message pattern (... summary)
+            from file tests/file_a.cpp, line ... occurred N times in M
+        seconds
 
 This is correct behavior, but, Gtest and Gmock don't manage threads in a
 manner that is compatible with the library.  Internally, the library

@@ -21,7 +21,7 @@ extern "C" {
 
 using VfprintfFn = int (*)(FILE *stream, const char *format, va_list ap);
 using VfprintfChkFn = int (*)(FILE *stream, int flag, const char *format,
-    va_list ap);
+        va_list ap);
 
 static VfprintfFn realVfprintf(void)
 {
@@ -429,7 +429,7 @@ extern "C" int __wrap___vfprintf_chk(FILE *stream, int flag,
     const char *format, va_list ap)
 {
     return SyscallShim::instance().invokeVfprintfChkHook(stream, flag, format,
-        ap);
+            ap);
 }
 
 extern "C" int __wrap_vfprintf(FILE *stream, const char *format,
@@ -453,7 +453,9 @@ extern "C" void __wrap_vsyslog(int priority, const char *format,
 {
     SyscallShim::instance().invokeVsyslogHook(priority, format, ap);
 }
-extern "C" void __wrap___vsyslog_chk(int priority, int flag, const char *format, va_list ap) {
+extern "C" void __wrap___vsyslog_chk(int priority, int flag,
+    const char *format, va_list ap)
+{
     // Forward directly to your existing wrap hook logic or mock handler
     // e.g., if __wrap_vsyslog just invokes your Mock instance, do that here:
     (void)flag;

@@ -183,7 +183,6 @@ class TlsObj final {
                 printSingleMsgMap(m_msgMap, false, countMsg, now);
                 s_tlsSet.erase(this);
             }
-
         }
     public: // should be private, change later
         LevelMap_t m_msgMap;
@@ -252,14 +251,14 @@ static void printSingleMsgMap(LevelMap_t &msgMap, bool isAtExit,
                     case LI_STDOUT:
                         ret = write(1, countMsg.c_str(), countMsg.size());
                         break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
                     case LI_JOURNAL:
                         sd_journal_print(level, countMsg.c_str());
                         break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
                     case LI_SYSLOG: {
                             {
                                 std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -307,7 +306,6 @@ static void shutdownCleanup(void)
         printSingleMsgMap(tlsIt->m_msgMap, true, countMsg, now);
         tlsIt->m_msgMap.clear();  // clear the map, but don't delete the actual TLS objects.
     }
-
 }
 
 // Note, we don't allow collapsing messages by more than an hour
@@ -350,8 +348,8 @@ LoggerInterface_t getLoggerInterface(void)
 int setLoggerInterface(LoggerInterface_t interface)
 {
     switch (interface) {
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
         case LI_JOURNAL:
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
 #ifdef HAVE_SYSLOG_H
@@ -431,7 +429,7 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
             ret = writev(2, vec, iovcnt + 2);
 #else
 
-            for (int i = 0; i < iovcnt+2; i++) {
+            for (int i = 0; i < iovcnt + 2; i++) {
                 ret = write(2, vec[i].iov_base, vec[i].iov_len);
             }
 
@@ -443,7 +441,7 @@ void LogSafe(int level, const struct iovec *iov, int iovcnt)
             ret = writev(1, vec, iovcnt + 2);
 #else
 
-            for (int i = 0; i < iovcnt+2; i++) {
+            for (int i = 0; i < iovcnt + 2; i++) {
                 ret = write(1, vec[i].iov_base, vec[i].iov_len);
             }
 
@@ -503,8 +501,8 @@ void LogImmediate(int level, const char *format, ...)
                 fflush(s_interface == LI_STDERR ? stderr : stdout);
             }
             break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
         case LI_JOURNAL: {
                 va_list ap;
                 va_start(ap, format);
@@ -516,8 +514,8 @@ void LogImmediate(int level, const char *format, ...)
             }
             break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
         case LI_SYSLOG: {
                 {
                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -582,8 +580,8 @@ void LogImmediateVA(int level, const char *format, va_list ap)
                 fflush(s_interface == LI_STDERR ? stderr : stdout);
             }
             break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
         case LI_JOURNAL: {
                 std::string s = ltoS;
                 s += ltoT;
@@ -592,8 +590,8 @@ void LogImmediateVA(int level, const char *format, va_list ap)
             }
             break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
         case LI_SYSLOG: {
                 {
                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -732,14 +730,14 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                         case LI_STDOUT:
                             ret = write(1, countMsg.c_str(), countMsg.size());
                             break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
                         case LI_JOURNAL:
                             sd_journal_print(level, countMsg.c_str());
                             break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
                         case LI_SYSLOG: {
                                 {
                                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -780,8 +778,8 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                     fflush(s_interface == LI_STDERR ? stderr : stdout);
                 }
                 break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
             case LI_JOURNAL: {
                     va_list ap;
                     va_start(ap, pattern);
@@ -793,8 +791,8 @@ void LogDedupped(int level, int lineNumber, const char *filename,
                 }
                 break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
             case LI_SYSLOG: {
                     {
                         std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -937,14 +935,14 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                         case LI_STDOUT:
                             ret = write(1, countMsg.c_str(), countMsg.size());
                             break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
                         case LI_JOURNAL:
                             sd_journal_print(level, countMsg.c_str());
                             break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
                         case LI_SYSLOG: {
                                 {
                                     std::lock_guard<std::mutex> lock(s_syslogMtx);
@@ -982,8 +980,8 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                     fflush(s_interface == LI_STDERR ? stderr : stdout);
                 }
                 break;
-
 #ifdef HAVE_SYSTEMD_SD_JOURNAL_H
+
             case LI_JOURNAL: {
                     std::string s = ltoS;
                     s += ltoT;
@@ -992,8 +990,8 @@ void LogDeduppedVA(int level, int lineNumber, const char *filename,
                 }
                 break;
 #endif // HAVE_SYSTEMD_SD_JOURNAL_H
-
 #ifdef HAVE_SYSLOG_H
+
             case LI_SYSLOG: {
                     {
                         std::lock_guard<std::mutex> lock(s_syslogMtx);
