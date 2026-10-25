@@ -117,9 +117,10 @@ find_program(CPPCHECK_EXECUTABLE NAMES cppcheck)
 if(CPPCHECK_EXECUTABLE)
     # Uses universally accepted checker flags compatible across all versions
     add_custom_target(cppcheck
-        COMMAND ${CPPCHECK_EXECUTABLE} --enable=all --inconclusive --force --std=c++11 --language=c++
+        COMMAND ${CPPCHECK_EXECUTABLE} --enable=all --inconclusive --force --std=c++11
                 --output-file=${PROJECT_BINARY_DIR}/cppcheck.out --check-level=exhaustive -v --library=std
                 --suppress=failedToEvaluate
+		--suppress=missingIncludeSystem
                 --suppress=preprocessorErrorDirective
                 --checkers-report=${PROJECT_BINARY_DIR}/cppcheck.checkers
                 -I${PROJECT_BINARY_DIR} -I${PROJECT_SOURCE_DIR}

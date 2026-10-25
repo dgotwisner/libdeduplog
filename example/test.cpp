@@ -45,13 +45,13 @@ int main(int ac, char **av)
     {
         // LogSafe test
         struct iovec iov[4];
-        iov[0].iov_base = (void *) "this is a ";
-        iov[1].iov_base = (void *) "test of a ";
-        iov[2].iov_base = (void *) "4 item ";
-        iov[3].iov_base = (void *) "vector\n";
+        iov[0].iov_base = const_cast<char *>("this is a ");
+        iov[1].iov_base = const_cast<char *>("test of a ");
+        iov[2].iov_base = const_cast<char *>("4 item ");
+        iov[3].iov_base = const_cast<char *>("vector\n");
 
         for (unsigned i = 0; i < dim(iov); i++) {
-            iov[i].iov_len = strlen((char *)(iov[i].iov_base));
+            iov[i].iov_len = strlen(reinterpret_cast<const char *>(iov[i].iov_base));
         }
 
         for (int i = 0; i < LOG_DEBUG; i++) {
