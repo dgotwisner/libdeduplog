@@ -145,20 +145,21 @@ TEST_F(DedupLogTest, SetLoggerInterfaceOptionalBackends)
 
 // ====================== LogImmediate ======================
 
-TEST_F(DedupLogCaptureTest, LogImmediateWritesFormattedStdoutMessage)
-{
-    ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
-    LogImmediate(LOG_ERR, "widget failed: %s (%d)\n", "disk", 42);
-    EXPECT_THAT(SyscallShim::instance().stdoutCapture(),
-        ::testing::HasSubstr("<3> Error widget failed: disk (42)"));
-}
-
 static void logImmediateVaHelper(int level, const char *pattern, ...)
 {
     va_list ap;
     va_start(ap, pattern);
     LogImmediateVA(level, pattern, ap);
     va_end(ap);
+}
+
+TEST_F(DedupLogCaptureTest, LogImmediateWritesFormattedStdoutMessage)
+{
+    ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
+    LogImmediate(LOG_ERR, "widget failed: %s (%d)\n", "disk", 42);
+    logImmediateVaHelper(LOG_ERR, "widget failed: %s (%d)\n", "disk", 42);
+    EXPECT_THAT(SyscallShim::instance().stdoutCapture(),
+        ::testing::HasSubstr("<3> Error widget failed: disk (42)"));
 }
 
 TEST_F(DedupLogCaptureTest, LogImmediateVARoutesThroughSamePath)
@@ -175,6 +176,8 @@ TEST_F(DedupLogCaptureTest, LogImmediateFiltersByConfiguredLogLevel)
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
     LogImmediate(LOG_INFO, "should not appear\n");
     LogImmediate(LOG_WARNING, "should appear\n");
+    logImmediateVaHelper(LOG_INFO, "should not appear\n");
+    logImmediateVaHelper(LOG_WARNING, "should appear\n");
     EXPECT_EQ(std::string::npos,
         SyscallShim::instance().stdoutCapture().find("should not appear"));
     EXPECT_THAT(SyscallShim::instance().stdoutCapture(),
@@ -185,6 +188,7 @@ TEST_F(DedupLogCaptureTest, LogImmediateDropsNegativeLevels)
 {
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
     LogImmediate(-1, "negative level\n");
+    logImmediateVaHelper(-1, "negative level\n");
     EXPECT_TRUE(SyscallShim::instance().stdoutCapture().empty());
 }
 
@@ -192,6 +196,7 @@ TEST_F(DedupLogCaptureTest, LogImmediateUsesStderrInterface)
 {
     ASSERT_EQ(1, setLoggerInterface(LI_STDERR));
     LogImmediate(LOG_CRIT, "critical path\n");
+    logImmediateVaHelper(LOG_CRIT, "critical path\n");
     EXPECT_TRUE(SyscallShim::instance().stdoutCapture().empty());
     EXPECT_THAT(SyscallShim::instance().stderrCapture(),
         ::testing::HasSubstr("<2> Critical critical path"));
@@ -424,6 +429,7 @@ TEST_F(DedupLogCaptureTest, LogDeduppedFiltersByConfiguredLogLevel)
     ASSERT_EQ(1, setLogLevel(LOG_ERR));
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
     LogDedupped(LOG_INFO, 601, kTestFileA, "filtered dedup\n");
+    logDeduppedVaHelper(LOG_INFO, 601, kTestFileA, "filtered dedup\n");
     EXPECT_TRUE(SyscallShim::instance().stdoutCapture().empty());
 }
 
@@ -434,13 +440,17 @@ TEST_F(DedupLogCaptureTest, LogDeduppedEmitsCountSummaryAfterThreshold)
     ASSERT_EQ(1, setLoggerInterface(LI_STDOUT));
     LogDedupped(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 0);
     LogDedupped(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 1);
+    logDeduppedVaHelper(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 2);
+    logDeduppedVaHelper(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 3);
     shim.advanceFakeTime(11);
-    LogDedupped(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 2);
+    LogDedupped(LOG_ERR, 701, kTestFileA, "thresholded %d\n", 4);
     const std::string &out = shim.stdoutCapture();
     EXPECT_THAT(out, ::testing::HasSubstr("thresholded 0"));
     EXPECT_EQ(std::string::npos, out.find("thresholded 1"));
     EXPECT_EQ(std::string::npos, out.find("thresholded 2"));
-    EXPECT_THAT(out, ::testing::HasSubstr("occurred 3 times in 11 seconds"));
+    EXPECT_EQ(std::string::npos, out.find("thresholded 3"));
+    EXPECT_EQ(std::string::npos, out.find("thresholded 4"));
+    EXPECT_THAT(out, ::testing::HasSubstr("occurred 5 times in 11 seconds"));
     EXPECT_THAT(out, ::testing::HasSubstr("tests/file_a.cpp, line 701"));
 }
 
@@ -457,6 +467,7 @@ TEST_F(DedupLogCaptureTest, LogSafeDropsNegativeLevels)
 TEST_F(DedupLogCaptureTest, LogDeduppedDropsNegativeLevels)
 {
     LogDedupped(-1, 651, kTestFileA, "negative dedup\n");
+    logDeduppedVaHelper(-1, 651, kTestFileA, "negative dedup\n");
     EXPECT_TRUE(SyscallShim::instance().stdoutCapture().empty());
 }
 
@@ -468,12 +479,14 @@ TEST_F(DedupLogCaptureTest,
     ASSERT_EQ(1, setLoggerInterface(LI_STDERR));
     LogDedupped(LOG_WARNING, 801, kTestFileA, "stderr summary\n");
     LogDedupped(LOG_WARNING, 801, kTestFileA, "stderr summary\n");
+    logDeduppedVaHelper(LOG_WARNING, 801, kTestFileA, "stderr summary\n");
+    logDeduppedVaHelper(LOG_WARNING, 801, kTestFileA, "stderr summary\n");
     shim.advanceFakeTime(6);
     LogDedupped(LOG_WARNING, 801, kTestFileA, "stderr summary\n");
     const std::string &err = shim.stderrCapture();
     EXPECT_THAT(err, ::testing::HasSubstr("<4> Warning"));
     EXPECT_THAT(err, ::testing::HasSubstr("The following message pattern"));
-    EXPECT_THAT(err, ::testing::HasSubstr("occurred 3 times in 6 seconds"));
+    EXPECT_THAT(err, ::testing::HasSubstr("occurred 5 times in 6 seconds"));
 }
 
 #ifdef HAVE_SYSLOG_H
@@ -493,6 +506,7 @@ TEST_F(DedupLogCaptureTest, LogDeduppedUsesSyslogForFirstMessage)
     .Times(AtLeast(1))
     .WillRepeatedly(testing::Invoke(&shim, &SyscallShim::defaultVsyslogHook));
     LogDedupped(LOG_ERR, 901, kTestFileA, "syslog dedup %d\n", 5);
+    logDeduppedVaHelper(LOG_ERR, 901, kTestFileA, "syslog dedup %d\n", 5);
     ASSERT_FALSE(shim.syslogCapture().empty());
     EXPECT_THAT(shim.syslogCapture().front(),
         ::testing::HasSubstr("syslog dedup 5"));
@@ -513,10 +527,12 @@ TEST_F(DedupLogCaptureTest, LogDeduppedUsesMockedTimeHookForThreshold)
     .WillRepeatedly(testing::Invoke(&shim, &SyscallShim::defaultTimeHook));
     LogDedupped(LOG_ERR, 1001, kTestFileA, "timed %d\n", 1);
     LogDedupped(LOG_ERR, 1001, kTestFileA, "timed %d\n", 2);
+    logDeduppedVaHelper(LOG_ERR, 1001, kTestFileA, "timed %d\n", 3);
+    logDeduppedVaHelper(LOG_ERR, 1001, kTestFileA, "timed %d\n", 4);
     shim.advanceFakeTime(3);
-    LogDedupped(LOG_ERR, 1001, kTestFileA, "timed %d\n", 3);
+    LogDedupped(LOG_ERR, 1001, kTestFileA, "timed %d\n", 5);
     EXPECT_THAT(shim.stdoutCapture(),
-        ::testing::HasSubstr("occurred 3 times in 3 seconds"));
+        ::testing::HasSubstr("occurred 5 times in 3 seconds"));
 }
 
 // ====================== Thread shutdown path ======================
@@ -528,6 +544,8 @@ TEST_F(DedupLogCaptureTest, ThreadShutdownFlushesPendingDuplicateCounts)
     std::thread worker([]() {
         LogDedupped(LOG_ERR, 1101, kTestFileA, "worker duplicate\n");
         LogDedupped(LOG_ERR, 1101, kTestFileA, "worker duplicate\n");
+        logDeduppedVaHelper(LOG_ERR, 1101, kTestFileA, "worker duplicate\n");
+        logDeduppedVaHelper(LOG_ERR, 1101, kTestFileA, "worker duplicate\n");
     });
     worker.join();
     EXPECT_THAT(shim.stdoutCapture(),
@@ -535,7 +553,7 @@ TEST_F(DedupLogCaptureTest, ThreadShutdownFlushesPendingDuplicateCounts)
     EXPECT_THAT(shim.stdoutCapture(),
         ::testing::HasSubstr("worker duplicate"));
     EXPECT_THAT(shim.stdoutCapture(),
-        ::testing::HasSubstr("occurred 2 times"));
+        ::testing::HasSubstr("occurred 4 times"));
     // Now your output capture buffer has the clean shutdown summary text,
     // and you can assert against it or let it flush normally while shims are alive.
     EXPECT_THAT(SyscallShim::instance().stdoutCapture(),
@@ -578,6 +596,7 @@ TEST_F(DedupLogCaptureTest, ForceAtexitLineCoverage)
     EXPECT_EXIT({
         // 1. Populate log metrics on the sub-process main thread
         LogDedupped(LOG_NOTICE, __LINE__, __FILE__, "forced atexit pattern\n");
+        logDeduppedVaHelper(LOG_NOTICE, __LINE__, __FILE__, "forced atexit pattern\n");
 
         // 2. Call standard exit to trigger the runtime atexit registry loops naturally
         std::exit(0);

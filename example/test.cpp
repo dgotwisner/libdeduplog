@@ -13,7 +13,6 @@
 #ifdef HAVE_STRING_H
     #include <cstring>
 #endif // HAVE_STRING_H
-
 #ifdef HAVE_UNISTD_H
     #include <unistd.h>
 #endif // HAVE_UNISTD_H
@@ -80,7 +79,10 @@ int main(int ac, char **av)
     {
         // LogImmediate test
         for (int i = 0; i < LOG_DEBUG; i++) {
-            LogImmediate(i, "This is a LogImmediate test, level %d\n", i);
+            LogImmediate(i, "LogImmediate: This is a LogImmediate test, level %d\n", i);
+        }
+        for (int i = 0; i < LOG_DEBUG; i++) {
+            logImmediateVaHelper(i, "LogImmediateVA: This is a LogImmediate test, level %d\n", i);
         }
     }
     {
@@ -91,7 +93,20 @@ int main(int ac, char **av)
             for (k = 0; k < 20; k++) {
                 for (j = 0; j < 1000; j++) {
                     LogDedupped(i, __LINE__, __FILE__,
-                        "This is a Log test, level %d - dedupped, iterator %d\n", i, j);
+                        "LogDedupped: This is a Log test, level %d - dedupped, iterator %d\n", i, j);
+                }
+
+                if (k != 0) {
+                    sleep(1);
+                }
+            }
+        }
+
+        for (i = 0; i < LOG_DEBUG; i++) {
+            for (k = 0; k < 20; k++) {
+                for (j = 0; j < 1000; j++) {
+                    logDeduppedVaHelper(i, __LINE__, __FILE__,
+                        "LogDeduppedVA: This is a Log test, level %d - dedupped, iterator %d\n", i, j);
                 }
 
                 if (k != 0) {
@@ -105,7 +120,11 @@ int main(int ac, char **av)
 
         for (i = 0; i < 3; i++) {
             LogDedupped(LOG_ERR, __LINE__, __FILE__,
-                "This is a message that will be replicated 3x in a short period of time, so should trigger the atexit() handler\n");
+                "LogDedupped: This is a message that will be replicated 3x in a short period of time, so should trigger the atexit() handler\n");
+        }
+        for (i = 0; i < 3; i++) {
+            logDeduppedVaHelper(LOG_ERR, __LINE__, __FILE__,
+                "LogDeduppedVA: This is a message that will be replicated 3x in a short period of time, so should trigger the atexit() handler\n");
         }
     }
     // Now do some thread stuff - 3 threads
